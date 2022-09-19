@@ -6,6 +6,7 @@ import {
   IndentationText,
   ManipulationSettings,
   SourceFile,
+  PropertyAssignment,
   ObjectLiteralExpression,
 } from "ts-morph";
 
@@ -25,35 +26,57 @@ const manipulationSettings: Partial<ManipulationSettings> = {
   indentationText: IndentationText.TwoSpaces,
 };
 
-export function activate(context: vscode.ExtensionContext) {
-  const disposable = vscode.commands.registerCommand(
-    "extension.createTranslation",
-    async () => {
-      const files = await findTranslationFiles();
-      const translationFiles = filterTranslationFilesByNearestMatch(files);
-      if (translationFiles.length === 0) {
-        vscode.window.showWarningMessage("No translation files found");
-        return;
-      }
-
-      const translationKey = await requestTranslationKey();
-      if (!translationKey) return showCancelledMessage();
-
-      const translations = await requestTranslations(translationFiles);
-      if (!translations) return showCancelledMessage();
-
-      const result = addTranslationsToFiles(translationKey, translations);
-      if (result instanceof Error) {
-        vscode.window.showWarningMessage(result.message);
-        return;
-      }
-
-      const transformedKey = transformKeyForInsertion(translationKey);
-      const inserted = await insertTranslationKeyIntoFile(transformedKey);
-      !inserted && (await copyKeyToClipboard(transformedKey));
+export function activate(ctx: vscode.ExtensionContext) {
+  registerCommand(ctx, "extension.insertExistingTranslationKey", async () => {
+    const files = await findTranslationFiles();
+    const translationFiles = filterTranslationFilesByNearestMatch(files);
+    if (translationFiles.length === 0) {
+      vscode.window.showWarningMessage("No translation files found");
+      return;
     }
-  );
 
+    const keys = extractTranslationKeysOfFile(translationFiles[0]);
+    const selectedKey = await vscode.window.showQuickPick(keys);
+    if (selectedKey === undefined) return showCancelledMessage();
+
+    const transformedKey = transformKeyForInsertion(selectedKey);
+    const inserted = await insertTranslationKeyIntoFile(transformedKey);
+    !inserted && (await copyKeyToClipboard(transformedKey));
+  });
+
+  registerCommand(ctx, "extension.createTranslation", async () => {
+    const files = await findTranslationFiles();
+    const translationFiles = filterTranslationFilesByNearestMatch(files);
+    if (translationFiles.length === 0) {
+      vscode.window.showWarningMessage("No translation files found");
+      return;
+    }
+
+    const translationKey = await requestTranslationKey();
+    if (!translationKey) return showCancelledMessage();
+
+    const translations = await requestTranslations(translationFiles);
+    if (!translations) return showCancelledMessage();
+
+    const result = addTranslationsToFiles(translationKey, translations);
+    if (result instanceof Error) {
+      vscode.window.showWarningMessage(result.message);
+      return;
+    }
+
+    const transformedKey = transformKeyForInsertion(translationKey);
+    const inserted = await insertTranslationKeyIntoFile(transformedKey);
+    !inserted && (await copyKeyToClipboard(transformedKey));
+  });
+
+}
+
+function registerCommand(
+  context: vscode.ExtensionContext,
+  key: string,
+  fn: () => Promise<void>
+) {
+  const disposable = vscode.commands.registerCommand(key, fn);
   context.subscriptions.push(disposable);
 }
 
@@ -71,6 +94,31 @@ async function insertTranslationKeyIntoFile(key: string) {
   });
 
   return true;
+}
+
+async function extractTranslationKeysOfFile(filePath: string) {
+  const project = new Project({ manipulationSettings });
+
+  const file = project.addSourceFileAtPath(filePath);
+  const varName = file.getBaseNameWithoutExtension();
+  const declaration = file.getVariableDeclaration(varName);
+  if (!declaration) return [];
+
+  const initializer = declaration.getInitializerIfKind(
+    SyntaxKind.ObjectLiteralExpression
+  );
+  if (!initializer) return [];
+
+  const propNames = initializer
+    .getProperties()
+    .filter((prop): prop is PropertyAssignment =>
+      prop.isKind(SyntaxKind.PropertyAssignment)
+    )
+    .map((prop) => prop.getName())
+    .map((name) => name.replace(/(^["'])|(["']$)/g, ""))
+    .sort();
+
+  return propNames;
 }
 
 async function addTranslationsToFiles(

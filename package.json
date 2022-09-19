@@ -12,7 +12,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:extension.createTranslation"
+    "onCommand:extension.createTranslation",
+    "onCommand:extension.insertExistingTranslationKey"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -20,6 +21,10 @@
       {
         "command": "extension.createTranslation",
         "title": "Translately: Create translation..."
+      },
+      {
+        "command": "extension.insertExistingTranslationKey",
+        "title": "Translately: Insert existing key..."
       }
     ],
     "configuration": {
