@@ -10,8 +10,10 @@ import {
 } from "ts-morph";
 
 export const KEY_INSERT_PATTERN = "translately.keyInsertPattern";
-export const TRANSLATION_FILES_INCLUDE_PATTERN = "translately.translationFilesIncludePattern";
-export const TRANSLATION_FILES_EXCLUDE_PATTERN = "translately.translationFilesExcludePattern";
+export const TRANSLATION_FILES_INCLUDE_PATTERN =
+  "translately.translationFilesIncludePattern";
+export const TRANSLATION_FILES_EXCLUDE_PATTERN =
+  "translately.translationFilesExcludePattern";
 
 interface TranslationEntry {
   file: string;
@@ -27,7 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
     "extension.createTranslation",
     async () => {
-      const translationFiles = await findTranslationFiles();
+      const files = await findTranslationFiles();
+      const translationFiles = filterTranslationFilesByNearestMatch(files);
       if (translationFiles.length === 0) {
         vscode.window.showWarningMessage("No translation files found");
         return;
@@ -165,8 +168,14 @@ async function requestTranslations(
 }
 
 async function findTranslationFiles() {
-  const pattern = getConfigValue(TRANSLATION_FILES_INCLUDE_PATTERN, '**/i18n/*.ts'); // `**/translation/[a-z][a-z]_[A-Z][A-Z].ts`;
-  const exclude = getConfigValue(TRANSLATION_FILES_EXCLUDE_PATTERN, '{**/dist/**,**/node_modules/**}');
+  const pattern = getConfigValue(
+    TRANSLATION_FILES_INCLUDE_PATTERN,
+    "**/i18n/*.ts"
+  ); // `**/translation/[a-z][a-z]_[A-Z][A-Z].ts`;
+  const exclude = getConfigValue(
+    TRANSLATION_FILES_EXCLUDE_PATTERN,
+    "{**/dist/**,**/node_modules/**}"
+  );
 
   const results = await vscode.workspace.findFiles(pattern, exclude);
   const files = results
@@ -174,6 +183,23 @@ async function findTranslationFiles() {
     .sort((a, b) => a.localeCompare(b));
 
   return files;
+}
+
+function filterTranslationFilesByNearestMatch(files: string[]) {
+  const current = vscode.window.activeTextEditor?.document.uri.fsPath;
+  if (!current) return files;
+
+  const filesWithMatches = files.map((file) => ({
+    file,
+    match: getMatch(current, file),
+  }));
+  const bestMatch = Math.max(...filesWithMatches.map((entry) => entry.match));
+
+  const filesWithBestMatch = filesWithMatches
+    .filter((entry) => entry.match === bestMatch)
+    .map((entry) => entry.file);
+
+  return filesWithBestMatch;
 }
 
 async function requestTranslationKey(): Promise<string | undefined> {
