@@ -29,6 +29,16 @@
           "type": "string",
           "default": "%KEY%",
           "description": "The pattern for inserting the translation key. The placeholder \"%KEY%\" will be replaced with the translation key."
+        },
+        "translately.translationFilesIncludePattern": {
+          "type": "string",
+          "default": "**/i18n/*.ts",
+          "description": "The pattern for finding the translation files."
+        },
+        "translately.translationFilesExcludePattern": {
+          "type": "string",
+          "default": "{dist,node_modules}",
+          "description": "The pattern for excluding paths when finding the translation files."
         }
       }
     }

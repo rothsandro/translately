@@ -10,6 +10,8 @@ import {
 } from "ts-morph";
 
 export const KEY_INSERT_PATTERN = "translately.keyInsertPattern";
+export const TRANSLATION_FILES_INCLUDE_PATTERN = "translately.translationFilesIncludePattern";
+export const TRANSLATION_FILES_EXCLUDE_PATTERN = "translately.translationFilesExcludePattern";
 
 interface TranslationEntry {
   file: string;
@@ -163,8 +165,8 @@ async function requestTranslations(
 }
 
 async function findTranslationFiles() {
-  const pattern = `**/translation/[a-z][a-z]_[A-Z][A-Z].ts`;
-  const exclude = `{dist,node_modules}`;
+  const pattern = getConfigValue(TRANSLATION_FILES_INCLUDE_PATTERN, '**/i18n/*.ts'); // `**/translation/[a-z][a-z]_[A-Z][A-Z].ts`;
+  const exclude = getConfigValue(TRANSLATION_FILES_EXCLUDE_PATTERN, '{**/dist/**,**/node_modules/**}');
 
   const results = await vscode.workspace.findFiles(pattern, exclude);
   const files = results
@@ -194,7 +196,11 @@ function showCancelledMessage() {
 }
 
 function transformKeyForInsertion(key: string) {
-  const config = vscode.workspace.getConfiguration();
-  const pattern = config.get<string>(KEY_INSERT_PATTERN) || "%KEY%";
+  const pattern = getConfigValue<string>(KEY_INSERT_PATTERN, "%KEY%");
   return pattern.replace(/%KEY%/gi, key);
+}
+
+function getConfigValue<T>(key: string, defaultValue: T): T {
+  const config = vscode.workspace.getConfiguration();
+  return config.get<T>(key) || defaultValue;
 }
