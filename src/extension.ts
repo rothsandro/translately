@@ -8,6 +8,8 @@ import {
   SourceFile,
 } from "ts-morph";
 
+export const KEY_INSERT_PATTERN = 'translately.keyInsertPattern';
+
 interface TranslationEntry {
   file: string;
   lang: string;
@@ -40,8 +42,9 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const inserted = await insertTranslationKeyIntoFile(translationKey);
-      !inserted && await copyKeyToClipboard(translationKey);
+      const transformedKey = transformKeyForInsertion(translationKey);
+      const inserted = await insertTranslationKeyIntoFile(transformedKey);
+      !inserted && (await copyKeyToClipboard(transformedKey));
     }
   );
 
@@ -144,4 +147,10 @@ async function requestTranslationKey(): Promise<string | undefined> {
 
 function showCancelledMessage() {
   vscode.window.showInformationMessage("Cancelled translation command");
+}
+
+function transformKeyForInsertion(key: string) {
+  const config = vscode.workspace.getConfiguration();
+  const pattern = config.get<string>(KEY_INSERT_PATTERN) || "%KEY%";
+  return pattern.replace(/%KEY%/gi, key);
 }

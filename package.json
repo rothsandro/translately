@@ -21,7 +21,17 @@
         "command": "extension.createTranslation",
         "title": "Translately: Create translation..."
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Translately",
+      "properties": {
+        "translately.keyInsertPattern": {
+          "type": "string",
+          "default": "%KEY%",
+          "description": "The pattern for inserting the translation key. The placeholder \"%KEY%\" will be replaced with the translation key."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
