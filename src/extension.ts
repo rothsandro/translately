@@ -6,9 +6,10 @@ import {
   IndentationText,
   ManipulationSettings,
   SourceFile,
+  ObjectLiteralExpression,
 } from "ts-morph";
 
-export const KEY_INSERT_PATTERN = 'translately.keyInsertPattern';
+export const KEY_INSERT_PATTERN = "translately.keyInsertPattern";
 
 interface TranslationEntry {
   file: string;
@@ -72,6 +73,7 @@ async function addTranslationsToFiles(
   entries: TranslationEntry[]
 ) {
   const project = new Project({ manipulationSettings });
+
   const files: SourceFile[] = [];
 
   for (const entry of entries) {
@@ -86,9 +88,8 @@ async function addTranslationsToFiles(
       return new Error(`Missing or invalid initializer for ${entry.lang}`);
     }
 
-    // TODO: Can we use ts.factory for this?
-    // ts.factory.createPropertyAssignment and ts.factory.createStringLiteral
-    initializer.addPropertyAssignment({
+    const indexOfNewProp = findIndexForNewKey(initializer, key);
+    initializer.insertPropertyAssignment(indexOfNewProp, {
       name: `'${key}'`,
       initializer: `'${entry.value}'`,
     });
@@ -97,6 +98,49 @@ async function addTranslationsToFiles(
   }
 
   files.forEach((file) => file.saveSync());
+}
+
+function findIndexForNewKey(obj: ObjectLiteralExpression, key: string) {
+  // We need to include the comments
+  // because when calling insertPropertyAssignment(index) the  comments
+  // are part of the list and affect the position
+  const props = obj.getPropertiesWithComments();
+  const propNames = props
+    .map((prop) =>
+      prop.isKind(SyntaxKind.PropertyAssignment) ? prop.getName() : ""
+    )
+    .map((name) => name.replace(/(^["'])|(["']$)/g, ""));
+
+  const sortedList = [...propNames, key].sort();
+  const newKeyIndex = sortedList.indexOf(key);
+
+  const prev = sortedList[newKeyIndex - 1] ?? "";
+  const prevMatch = getMatch(key, prev);
+  const next = sortedList[newKeyIndex + 1] ?? "";
+  const nextMatch = getMatch(key, next);
+
+  const relativeToPrev = prevMatch > nextMatch;
+  const relatedKeyIndex = relativeToPrev ? newKeyIndex - 1 : newKeyIndex + 1;
+
+  const relatedKey = sortedList[relatedKeyIndex];
+  const actualRelatedKeyIndex = propNames.indexOf(relatedKey);
+  const actualNewKeyIndex = relativeToPrev
+    ? actualRelatedKeyIndex + 1
+    : actualRelatedKeyIndex;
+
+  return actualNewKeyIndex;
+}
+
+function getMatch(a: string, b: string) {
+  const max = Math.max(a.length, b.length);
+
+  for (let i = 1; i <= max; i++) {
+    if (!b.startsWith(a.slice(0, i))) {
+      return i - 1;
+    }
+  }
+
+  return max;
 }
 
 async function requestTranslations(
