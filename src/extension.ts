@@ -180,8 +180,6 @@ async function addTranslationsToFiles(
 ) {
   const project = createProject();
 
-  const files: SourceFile[] = [];
-
   for (const entry of entries) {
     const file = project.addSourceFileAtPath(entry.file);
     const initializer = getTranslationObjectOfFile(file);
@@ -197,11 +195,9 @@ async function addTranslationsToFiles(
       name: `${quoteKind}${key}${quoteKind}`,
       initializer: `${quoteKind}${escapedValue}${quoteKind}`,
     });
-
-    files.push(file);
   }
 
-  files.forEach((file) => file.saveSync());
+  await project.save();
 }
 
 function escapeTranslation(translation: string, quote: QuoteKind) {
