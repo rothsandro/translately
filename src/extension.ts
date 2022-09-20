@@ -234,7 +234,7 @@ async function requestTranslations(
       prompt: `File: ${vscode.workspace.asRelativePath(file)}`,
     });
 
-    if (!value) return undefined;
+    if (typeof value !== 'string') return undefined;
     entries.push({ file, lang, value: value ?? "" });
   }
 
