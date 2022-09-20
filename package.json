@@ -44,6 +44,11 @@
           "type": "string",
           "default": "{dist,node_modules}",
           "description": "The pattern for excluding paths when finding the translation files."
+        },
+        "translately.translationVariablePattern": {
+          "type": "string",
+          "default": "[a-z]{2}[A-Z]{2}",
+          "description": "The RegExp for the variable name of the translation object."
         }
       }
     }

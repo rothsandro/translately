@@ -15,6 +15,8 @@ export const TRANSLATION_FILES_INCLUDE_PATTERN =
   "translately.translationFilesIncludePattern";
 export const TRANSLATION_FILES_EXCLUDE_PATTERN =
   "translately.translationFilesExcludePattern";
+export const TRANSLATION_VARIABLE_PATTERN =
+  "translately.translationVariablePattern";
 
 interface TranslationEntry {
   file: string;
@@ -35,7 +37,12 @@ export function activate(ctx: vscode.ExtensionContext) {
       return;
     }
 
-    const keys = extractTranslationKeysOfFile(translationFiles[0]);
+    const keys = await extractTranslationKeysOfFile(translationFiles[0]);
+    if (keys.length === 0) {
+      vscode.window.showWarningMessage("No translation keys found");
+      return;
+    }
+    
     const selectedKey = await vscode.window.showQuickPick(keys);
     if (selectedKey === undefined) return showCancelledMessage();
 
@@ -109,13 +116,7 @@ async function extractTranslationKeysOfFile(filePath: string) {
   const project = new Project({ manipulationSettings });
 
   const file = project.addSourceFileAtPath(filePath);
-  const varName = file.getBaseNameWithoutExtension();
-  const declaration = file.getVariableDeclaration(varName);
-  if (!declaration) return [];
-
-  const initializer = declaration.getInitializerIfKind(
-    SyntaxKind.ObjectLiteralExpression
-  );
+  const initializer = getTranslationObjectOfFile(file);
   if (!initializer) return [];
 
   const propNames = initializer
@@ -130,6 +131,27 @@ async function extractTranslationKeysOfFile(filePath: string) {
   return propNames;
 }
 
+function getTranslationObjectOfFile(
+  file: SourceFile
+): ObjectLiteralExpression | undefined {
+  const pattern = getConfigValue(
+    TRANSLATION_VARIABLE_PATTERN,
+    "[a-z]{2}[A-Z]{2}"
+  );
+  const regex = new RegExp(pattern);
+
+  for (const declaration of file.getVariableDeclarations()) {
+    const name = declaration.getName();
+    if (!regex.test(name)) continue;
+    const initializer = declaration.getInitializerIfKind(
+      SyntaxKind.ObjectLiteralExpression
+    );
+    if (initializer) return initializer;
+  }
+
+  return undefined;
+}
+
 async function addTranslationsToFiles(
   key: string,
   entries: TranslationEntry[]
@@ -140,14 +162,9 @@ async function addTranslationsToFiles(
 
   for (const entry of entries) {
     const file = project.addSourceFileAtPath(entry.file);
-    const declaration = file.getVariableDeclaration(entry.lang);
-    if (!declaration) return new Error(`Missing declaration for ${entry.lang}`);
-
-    const initializer = declaration.getInitializerIfKind(
-      SyntaxKind.ObjectLiteralExpression
-    );
+    const initializer = getTranslationObjectOfFile(file);
     if (!initializer) {
-      return new Error(`Missing or invalid initializer for ${entry.lang}`);
+      return new Error(`Missing translations for ${entry.lang}`);
     }
 
     const indexOfNewProp = findIndexForNewKey(initializer, key);
