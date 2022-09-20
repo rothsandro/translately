@@ -3,21 +3,20 @@ import * as path from "path";
 import {
   Project,
   SyntaxKind,
-  IndentationText,
   SourceFile,
   PropertyAssignment,
   ObjectLiteralExpression,
   QuoteKind,
 } from "ts-morph";
-
-export const KEY_INSERT_PATTERN = "translately.keyInsertPattern";
-export const TRANSLATION_FILES_INCLUDE_PATTERN =
-  "translately.translationFilesIncludePattern";
-export const TRANSLATION_FILES_EXCLUDE_PATTERN =
-  "translately.translationFilesExcludePattern";
-export const TRANSLATION_VARIABLE_PATTERN =
-  "translately.translationVariablePattern";
-export const INDENTATION_TEXT = "translately.indentationText";
+import { ConfigService } from "./config.service";
+import {
+  identationTypeConfig,
+  indentationMapping,
+  keyInsertPatternConfig,
+  translationFilesExcludePatternConfig,
+  translationFilesIncludePatternConfig,
+  translationVariablePattern,
+} from "./configs";
 
 interface TranslationEntry {
   file: string;
@@ -25,12 +24,7 @@ interface TranslationEntry {
   value: string;
 }
 
-const indentationMapping = {
-  "2 spaces": IndentationText.TwoSpaces,
-  "4 spaces": IndentationText.FourSpaces,
-  "8 spaces": IndentationText.EightSpaces,
-  Tab: IndentationText.Tab,
-} as const;
+const configService = new ConfigService();
 
 export function activate(ctx: vscode.ExtensionContext) {
   registerCommand(ctx, "extension.insertExistingTranslationKey", async () => {
@@ -137,16 +131,13 @@ async function extractTranslationKeysOfFile(filePath: string) {
 }
 
 function createProject() {
-  const indentation = getConfigValue<keyof typeof indentationMapping>(
-    INDENTATION_TEXT,
-    "2 spaces"
-  );
-  const parsedIndentation =
-    indentationMapping[indentation] ?? indentationMapping["2 spaces"];
+  const config = configService.getValue(identationTypeConfig);
+  const indentation =
+    indentationMapping[config] ?? indentationMapping["2 spaces"];
 
   const project = new Project({
     manipulationSettings: {
-      indentationText: parsedIndentation,
+      indentationText: indentation,
     },
   });
 
@@ -156,10 +147,7 @@ function createProject() {
 function getTranslationObjectOfFile(
   file: SourceFile
 ): ObjectLiteralExpression | undefined {
-  const pattern = getConfigValue(
-    TRANSLATION_VARIABLE_PATTERN,
-    "[a-z]{2}[A-Z]{2}"
-  );
+  const pattern = configService.getValue(translationVariablePattern);
   const regex = new RegExp(pattern);
 
   for (const declaration of file.getVariableDeclarations()) {
@@ -280,14 +268,8 @@ async function requestTranslations(
 }
 
 async function findTranslationFiles() {
-  const pattern = getConfigValue(
-    TRANSLATION_FILES_INCLUDE_PATTERN,
-    "**/i18n/*.ts"
-  ); // `**/translation/[a-z][a-z]_[A-Z][A-Z].ts`;
-  const exclude = getConfigValue(
-    TRANSLATION_FILES_EXCLUDE_PATTERN,
-    "{**/dist/**,**/node_modules/**}"
-  );
+  const pattern = configService.getValue(translationFilesIncludePatternConfig);
+  const exclude = configService.getValue(translationFilesExcludePatternConfig);
 
   const results = await vscode.workspace.findFiles(pattern, exclude);
   const files = results
@@ -328,11 +310,6 @@ function showCancelledMessage() {
 }
 
 function transformKeyForInsertion(key: string) {
-  const pattern = getConfigValue<string>(KEY_INSERT_PATTERN, "%KEY%");
+  const pattern = configService.getValue(keyInsertPatternConfig);
   return pattern.replace(/%KEY%/gi, key);
-}
-
-function getConfigValue<T>(key: string, defaultValue: T): T {
-  const config = vscode.workspace.getConfiguration();
-  return config.get<T>(key) || defaultValue;
 }

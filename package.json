@@ -50,7 +50,7 @@
           "default": "[a-z]{2}[A-Z]{2}",
           "description": "The RegExp for the variable name of the translation object."
         },
-        "translately.indentationText": {
+        "translately.indentationType": {
           "type": "string",
           "enum": [
             "2 spaces",
