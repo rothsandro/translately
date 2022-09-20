@@ -7,6 +7,7 @@ import {
   SourceFile,
   PropertyAssignment,
   ObjectLiteralExpression,
+  QuoteKind,
 } from "ts-morph";
 
 export const KEY_INSERT_PATTERN = "translately.keyInsertPattern";
@@ -189,15 +190,35 @@ async function addTranslationsToFiles(
     }
 
     const indexOfNewProp = findIndexForNewKey(initializer, key);
+    const quoteKind = getQuoteKind(initializer);
+    const escapedValue = escapeTranslation(entry.value, quoteKind);
+
     initializer.insertPropertyAssignment(indexOfNewProp, {
-      name: `'${key}'`,
-      initializer: `'${entry.value}'`,
+      name: `${quoteKind}${key}${quoteKind}`,
+      initializer: `${quoteKind}${escapedValue}${quoteKind}`,
     });
 
     files.push(file);
   }
 
   files.forEach((file) => file.saveSync());
+}
+
+function escapeTranslation(translation: string, quote: QuoteKind) {
+  const pattern = new RegExp(`(${quote})`, "g");
+  return translation.replace(pattern, "\\$1");
+}
+
+function getQuoteKind(obj: ObjectLiteralExpression) {
+  const firstProp = obj
+    .getProperties()
+    .find((prop): prop is PropertyAssignment =>
+      prop.isKind(SyntaxKind.PropertyAssignment)
+    );
+  const kind = firstProp?.getName().startsWith("'")
+    ? QuoteKind.Single
+    : QuoteKind.Double;
+  return kind;
 }
 
 function findIndexForNewKey(obj: ObjectLiteralExpression, key: string) {
@@ -228,7 +249,7 @@ function findIndexForNewKey(obj: ObjectLiteralExpression, key: string) {
     ? actualRelatedKeyIndex + 1
     : actualRelatedKeyIndex;
 
-  return  actualNewKeyIndex;
+  return actualNewKeyIndex;
 }
 
 function getMatch(a: string, b: string) {
