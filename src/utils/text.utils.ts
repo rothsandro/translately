@@ -15,3 +15,9 @@ export function matchStrings(a: string, b: string): number {
 
   return max;
 }
+
+export function removeQuotes(string: string | undefined): string {
+  return typeof string === "string"
+    ? string.replace(/(^["'])|(["']$)/g, "")
+    : "";
+}

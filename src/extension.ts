@@ -14,7 +14,12 @@ import { ToastService } from "./services/toast.service";
 import { EditorService } from "./services/editor.service";
 import { WorkspaceService } from "./services/workspace.service";
 import { TranslationFileService } from "./services/translation-file.service";
-import { matchStrings } from "./utils/text.utils";
+import { matchStrings, removeQuotes } from "./utils/text.utils";
+
+interface TranslationKey {
+  name: string;
+  value: string;
+}
 
 interface TranslationEntry {
   file: string;
@@ -46,10 +51,10 @@ export function activate(ctx: vscode.ExtensionContext) {
       return;
     }
 
-    const selectedKey = await vscode.window.showQuickPick(keys);
+    const selectedKey = await requestTranslationKeyFromList(keys);
     if (selectedKey === undefined) return showCancelledMessage();
 
-    await insertOrCopyTranslationKey(selectedKey);
+    await insertOrCopyTranslationKey(selectedKey.name);
   });
 
   registerCommand(ctx, "extension.createTranslation", async () => {
@@ -78,6 +83,19 @@ export function activate(ctx: vscode.ExtensionContext) {
   });
 }
 
+async function requestTranslationKeyFromList(keys: TranslationKey[]) {
+  const items = keys.map(
+    (key): vscode.QuickPickItem => ({
+      label: key.name,
+      detail: key.value,
+    })
+  );
+
+  const config = { matchOnDetail: true };
+  const selection = await vscode.window.showQuickPick(items, config);
+  return selection ? keys[items.indexOf(selection)] : undefined;
+}
+
 async function insertOrCopyTranslationKey(key: string) {
   const transformedKey = transformKeyForInsertion(key);
   const inserted = await editorService.replaceSelection(transformedKey);
@@ -98,7 +116,9 @@ async function copyKeyToClipboard(key: string) {
   toastService.showInfo("Key copied to clipboard");
 }
 
-async function extractTranslationKeysOfFile(filePath: string) {
+async function extractTranslationKeysOfFile(
+  filePath: string
+): Promise<TranslationKey[]> {
   const project = createProject();
 
   const file = project.addSourceFileAtPath(filePath);
@@ -110,9 +130,13 @@ async function extractTranslationKeysOfFile(filePath: string) {
     .filter((prop): prop is PropertyAssignment =>
       prop.isKind(SyntaxKind.PropertyAssignment)
     )
-    .map((prop) => prop.getName())
-    .map((name) => name.replace(/(^["'])|(["']$)/g, ""))
-    .sort();
+    .map((prop) => {
+      const value = prop
+        .getChildAtIndexIfKind(2, SyntaxKind.StringLiteral)
+        ?.getText();
+      return { name: removeQuotes(prop.getName()), value: removeQuotes(value) };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return propNames;
 }
