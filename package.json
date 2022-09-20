@@ -3,7 +3,7 @@
   "displayName": "translately",
   "description": "Manage translations in TypeScript files",
   "version": "0.0.1",
-  "publisher": "Sandro Roth",
+  "publisher": "SandroRoth",
   "repository": "https://github.com/rothsandro/translately",
   "engines": {
     "vscode": "^1.34.0"
