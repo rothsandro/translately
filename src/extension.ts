@@ -4,7 +4,6 @@ import {
   Project,
   SyntaxKind,
   IndentationText,
-  ManipulationSettings,
   SourceFile,
   PropertyAssignment,
   ObjectLiteralExpression,
@@ -17,6 +16,7 @@ export const TRANSLATION_FILES_EXCLUDE_PATTERN =
   "translately.translationFilesExcludePattern";
 export const TRANSLATION_VARIABLE_PATTERN =
   "translately.translationVariablePattern";
+export const INDENTATION_TEXT = "translately.indentationText";
 
 interface TranslationEntry {
   file: string;
@@ -24,9 +24,12 @@ interface TranslationEntry {
   value: string;
 }
 
-const manipulationSettings: Partial<ManipulationSettings> = {
-  indentationText: IndentationText.TwoSpaces,
-};
+const indentationMapping = {
+  "2 spaces": IndentationText.TwoSpaces,
+  "4 spaces": IndentationText.FourSpaces,
+  "8 spaces": IndentationText.EightSpaces,
+  Tab: IndentationText.Tab,
+} as const;
 
 export function activate(ctx: vscode.ExtensionContext) {
   registerCommand(ctx, "extension.insertExistingTranslationKey", async () => {
@@ -42,7 +45,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       vscode.window.showWarningMessage("No translation keys found");
       return;
     }
-    
+
     const selectedKey = await vscode.window.showQuickPick(keys);
     if (selectedKey === undefined) return showCancelledMessage();
 
@@ -96,6 +99,7 @@ async function copyKeyToClipboard(key: string) {
 
 function getSelectedText() {
   const activeTextEditor = vscode.window.activeTextEditor;
+
   const selection = activeTextEditor?.selection;
   const selectedText = activeTextEditor?.document.getText(selection);
   return selectedText;
@@ -113,7 +117,7 @@ async function insertTranslationKeyIntoFile(key: string) {
 }
 
 async function extractTranslationKeysOfFile(filePath: string) {
-  const project = new Project({ manipulationSettings });
+  const project = createProject();
 
   const file = project.addSourceFileAtPath(filePath);
   const initializer = getTranslationObjectOfFile(file);
@@ -129,6 +133,23 @@ async function extractTranslationKeysOfFile(filePath: string) {
     .sort();
 
   return propNames;
+}
+
+function createProject() {
+  const indentation = getConfigValue<keyof typeof indentationMapping>(
+    INDENTATION_TEXT,
+    "2 spaces"
+  );
+  const parsedIndentation =
+    indentationMapping[indentation] ?? indentationMapping["2 spaces"];
+
+  const project = new Project({
+    manipulationSettings: {
+      indentationText: parsedIndentation,
+    },
+  });
+
+  return project;
 }
 
 function getTranslationObjectOfFile(
@@ -156,7 +177,7 @@ async function addTranslationsToFiles(
   key: string,
   entries: TranslationEntry[]
 ) {
-  const project = new Project({ manipulationSettings });
+  const project = createProject();
 
   const files: SourceFile[] = [];
 
@@ -207,7 +228,7 @@ function findIndexForNewKey(obj: ObjectLiteralExpression, key: string) {
     ? actualRelatedKeyIndex + 1
     : actualRelatedKeyIndex;
 
-  return actualNewKeyIndex;
+  return  actualNewKeyIndex;
 }
 
 function getMatch(a: string, b: string) {
@@ -234,7 +255,7 @@ async function requestTranslations(
       prompt: `File: ${vscode.workspace.asRelativePath(file)}`,
     });
 
-    if (typeof value !== 'string') return undefined;
+    if (typeof value !== "string") return undefined;
     entries.push({ file, lang, value: value ?? "" });
   }
 
