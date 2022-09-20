@@ -1,8 +1,8 @@
 import { env } from "vscode";
 import { configs } from "../configs";
-import { ConfigService } from "./config.service";
-import { EditorService } from "./editor.service";
-import { ToastService } from "./toast.service";
+import { configService, ConfigService } from "./config.service";
+import { editorService, EditorService } from "./editor.service";
+import { toastService, ToastService } from "./toast.service";
 
 export class TranslationKeyService {
   constructor(
@@ -27,3 +27,9 @@ export class TranslationKeyService {
     this.toastService.showInfo("Key copied to clipboard");
   }
 }
+
+export const translationKeyService = new TranslationKeyService(
+  configService,
+  editorService,
+  toastService
+);

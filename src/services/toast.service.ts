@@ -13,3 +13,5 @@ export class ToastService {
     this.showInfo("Cancelled command");
   }
 }
+
+export const toastService = new ToastService();

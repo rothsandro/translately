@@ -24,3 +24,5 @@ export class EditorService {
     return true;
   }
 }
+
+export const editorService = new EditorService();

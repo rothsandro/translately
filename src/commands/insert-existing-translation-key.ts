@@ -1,28 +1,9 @@
-import { ConfigService } from "../services/config.service";
-import { EditorService } from "../services/editor.service";
-import { ToastService } from "../services/toast.service";
-import { FileService } from "../services/file.service";
-import { WorkspaceService } from "../services/workspace.service";
-import { TranslationService } from "../services/translation.service";
+import { toastService } from "../services/toast.service";
+import { fileService } from "../services/file.service";
+import { translationService } from "../services/translation.service";
 import { TranslationKey } from "../types/translation";
 import { QuickPickItem, window } from "vscode";
-import { TranslationKeyService } from "../services/translation-key.service";
-
-const configService = new ConfigService();
-const toastService = new ToastService();
-const editorService = new EditorService();
-const workspaceService = new WorkspaceService();
-const translationService = new TranslationService(configService);
-const translationKeyService = new TranslationKeyService(
-  configService,
-  editorService,
-  toastService
-);
-const fileService = new FileService(
-  configService,
-  workspaceService,
-  editorService
-);
+import { translationKeyService } from "../services/translation-key.service";
 
 export const insertExistingTranslationKeyCommand = {
   key: "extension.insertExistingTranslationKey",

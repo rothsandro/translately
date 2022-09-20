@@ -1,29 +1,12 @@
-import { ConfigService } from "../services/config.service";
-import { EditorService } from "../services/editor.service";
-import { ToastService } from "../services/toast.service";
-import { FileService } from "../services/file.service";
-import { WorkspaceService } from "../services/workspace.service";
-import { TranslationService } from "../services/translation.service";
+import { editorService } from "../services/editor.service";
+import { toastService } from "../services/toast.service";
+import { fileService } from "../services/file.service";
+import { workspaceService } from "../services/workspace.service";
+import { translationService } from "../services/translation.service";
 import { TranslationEntry } from "../types/translation";
-import { TranslationKeyService } from "../services/translation-key.service";
+import { translationKeyService } from "../services/translation-key.service";
 import { window } from "vscode";
 import * as path from "path";
-
-const configService = new ConfigService();
-const toastService = new ToastService();
-const editorService = new EditorService();
-const workspaceService = new WorkspaceService();
-const translationService = new TranslationService(configService);
-const translationKeyService = new TranslationKeyService(
-  configService,
-  editorService,
-  toastService
-);
-const fileService = new FileService(
-  configService,
-  workspaceService,
-  editorService
-);
 
 export const createTranslationCommand = {
   key: "extension.createTranslation",

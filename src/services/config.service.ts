@@ -7,3 +7,5 @@ export class ConfigService {
     return config.get<T>(configEntry.key) || configEntry.defaultValue;
   }
 }
+
+export const configService = new ConfigService();

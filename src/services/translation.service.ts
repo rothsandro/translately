@@ -9,7 +9,7 @@ import {
 import { configs, indentationMapping } from "../configs";
 import { TranslationEntry, TranslationKey } from "../types/translation";
 import { matchStrings, removeQuotes } from "../utils/text.utils";
-import { ConfigService } from "./config.service";
+import { configService, ConfigService } from "./config.service";
 
 export class TranslationService {
   constructor(private configService: ConfigService) {}
@@ -146,3 +146,5 @@ export class TranslationService {
     return project;
   }
 }
+
+export const translationService = new TranslationService(configService);

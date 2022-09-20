@@ -1,9 +1,9 @@
 import { window } from "vscode";
 import { configs } from "../configs";
 import { matchStrings } from "../utils/text.utils";
-import { ConfigService } from "./config.service";
-import { EditorService } from "./editor.service";
-import { WorkspaceService } from "./workspace.service";
+import { configService, ConfigService } from "./config.service";
+import { editorService, EditorService } from "./editor.service";
+import { workspaceService, WorkspaceService } from "./workspace.service";
 
 export class FileService {
   constructor(
@@ -58,3 +58,9 @@ export class FileService {
     return filesWithBestMatch;
   }
 }
+
+export const fileService = new FileService(
+  configService,
+  workspaceService,
+  editorService
+);

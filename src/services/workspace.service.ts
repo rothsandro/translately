@@ -19,3 +19,5 @@ export class WorkspaceService {
     return workspace.asRelativePath(file);
   }
 }
+
+export const workspaceService = new WorkspaceService();
