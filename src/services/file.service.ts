@@ -5,7 +5,7 @@ import { ConfigService } from "./config.service";
 import { EditorService } from "./editor.service";
 import { WorkspaceService } from "./workspace.service";
 
-export class TranslationFileService {
+export class FileService {
   constructor(
     private configService: ConfigService,
     private workspaceService: WorkspaceService,

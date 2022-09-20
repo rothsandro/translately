@@ -8,4 +8,8 @@ export class ToastService {
   showWarning(text: string) {
     vscode.window.showWarningMessage(text);
   }
+
+  showCancelledMessage() {
+    this.showInfo("Cancelled command");
+  }
 }
