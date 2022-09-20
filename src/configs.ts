@@ -5,31 +5,37 @@ export interface ConfigEntry<T = string> {
   readonly defaultValue: T;
 }
 
-export const keyInsertPatternConfig: ConfigEntry<string> = {
+const keyInsertPatternConfig: ConfigEntry<string> = {
   key: "translately.keyInsertPattern",
   defaultValue: "%KEY%",
 };
 
-export const translationFilesIncludePatternConfig: ConfigEntry<string> = {
+const translationFilesIncludePatternConfig: ConfigEntry<string> = {
   key: "translately.translationFilesIncludePattern",
   defaultValue: "**/i18n/*.ts",
 };
 
-export const translationFilesExcludePatternConfig: ConfigEntry<string> = {
+const translationFilesExcludePatternConfig: ConfigEntry<string> = {
   key: "translately.translationFilesExcludePattern",
   defaultValue: "{**/dist/**,**/node_modules/**}",
 };
 
-export const translationVariablePattern: ConfigEntry<string> = {
+const translationVariablePatternConfig: ConfigEntry<string> = {
   key: "translately.translationVariablePattern",
   defaultValue: "[a-z]{2}[A-Z]{2}",
 };
 
-export const identationTypeConfig: ConfigEntry<
-  keyof typeof indentationMapping
-> = {
+const identationTypeConfig: ConfigEntry<keyof typeof indentationMapping> = {
   key: "translately.indentationType",
   defaultValue: "2 spaces",
+};
+
+export const configs = {
+  keyInsertPattern: keyInsertPatternConfig,
+  translationFilesIncludePattern: translationFilesIncludePatternConfig,
+  translationFilesExcludePattern: translationFilesExcludePatternConfig,
+  translationVariablePattern: translationVariablePatternConfig,
+  identationType: identationTypeConfig,
 };
 
 export const indentationMapping = {

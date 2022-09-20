@@ -8,15 +8,11 @@ import {
   ObjectLiteralExpression,
   QuoteKind,
 } from "ts-morph";
-import { ConfigService } from "./config.service";
-import {
-  identationTypeConfig,
-  indentationMapping,
-  keyInsertPatternConfig,
-  translationFilesExcludePatternConfig,
-  translationFilesIncludePatternConfig,
-  translationVariablePattern,
-} from "./configs";
+import { configs, indentationMapping } from "./configs";
+import { ConfigService } from "./services/config.service";
+import { ToastService } from "./services/toast.service";
+import { EditorService } from "./services/editor.service";
+import { WorkspaceService } from "./services/workspace.service";
 
 interface TranslationEntry {
   file: string;
@@ -25,19 +21,22 @@ interface TranslationEntry {
 }
 
 const configService = new ConfigService();
+const toastService = new ToastService();
+const editorService = new EditorService();
+const workspaceService = new WorkspaceService();
 
 export function activate(ctx: vscode.ExtensionContext) {
   registerCommand(ctx, "extension.insertExistingTranslationKey", async () => {
     const files = await findTranslationFiles();
     const translationFiles = filterTranslationFilesByNearestMatch(files);
     if (translationFiles.length === 0) {
-      vscode.window.showWarningMessage("No translation files found");
+      toastService.showWarning("No translation files found");
       return;
     }
 
     const keys = await extractTranslationKeysOfFile(translationFiles[0]);
     if (keys.length === 0) {
-      vscode.window.showWarningMessage("No translation keys found");
+      toastService.showWarning("No translation keys found");
       return;
     }
 
@@ -53,11 +52,11 @@ export function activate(ctx: vscode.ExtensionContext) {
     const files = await findTranslationFiles();
     const translationFiles = filterTranslationFilesByNearestMatch(files);
     if (translationFiles.length === 0) {
-      vscode.window.showWarningMessage("No translation files found");
+      toastService.showWarning("No translation files found");
       return;
     }
 
-    const selectedText = getSelectedText();
+    const selectedText = editorService.getSelectedText();
     const translationKey = selectedText || (await requestTranslationKey());
     if (!translationKey) return showCancelledMessage();
 
@@ -66,7 +65,7 @@ export function activate(ctx: vscode.ExtensionContext) {
 
     const result = addTranslationsToFiles(translationKey, translations);
     if (result instanceof Error) {
-      vscode.window.showWarningMessage(result.message);
+      toastService.showWarning(result.message);
       return;
     }
 
@@ -89,15 +88,7 @@ function registerCommand(
 
 async function copyKeyToClipboard(key: string) {
   await vscode.env.clipboard.writeText(key);
-  vscode.window.showInformationMessage("Key copied to clipboard");
-}
-
-function getSelectedText() {
-  const activeTextEditor = vscode.window.activeTextEditor;
-
-  const selection = activeTextEditor?.selection;
-  const selectedText = activeTextEditor?.document.getText(selection);
-  return selectedText;
+  toastService.showInfo("Key copied to clipboard");
 }
 
 async function insertTranslationKeyIntoFile(key: string) {
@@ -131,7 +122,7 @@ async function extractTranslationKeysOfFile(filePath: string) {
 }
 
 function createProject() {
-  const config = configService.getValue(identationTypeConfig);
+  const config = configService.getValue(configs.identationType);
   const indentation =
     indentationMapping[config] ?? indentationMapping["2 spaces"];
 
@@ -147,7 +138,7 @@ function createProject() {
 function getTranslationObjectOfFile(
   file: SourceFile
 ): ObjectLiteralExpression | undefined {
-  const pattern = configService.getValue(translationVariablePattern);
+  const pattern = configService.getValue(configs.translationVariablePattern);
   const regex = new RegExp(pattern);
 
   for (const declaration of file.getVariableDeclarations()) {
@@ -257,7 +248,7 @@ async function requestTranslations(
     const lang = path.parse(file).name;
     const value = await vscode.window.showInputBox({
       placeHolder: `Translation for ${lang}`,
-      prompt: `File: ${vscode.workspace.asRelativePath(file)}`,
+      prompt: `File: ${workspaceService.getRelativePathOf(file)}`,
     });
 
     if (typeof value !== "string") return undefined;
@@ -268,15 +259,14 @@ async function requestTranslations(
 }
 
 async function findTranslationFiles() {
-  const pattern = configService.getValue(translationFilesIncludePatternConfig);
-  const exclude = configService.getValue(translationFilesExcludePatternConfig);
+  const include = configService.getValue(
+    configs.translationFilesIncludePattern
+  );
+  const exclude = configService.getValue(
+    configs.translationFilesExcludePattern
+  );
 
-  const results = await vscode.workspace.findFiles(pattern, exclude);
-  const files = results
-    .map((result) => result.fsPath.toString())
-    .sort((a, b) => a.localeCompare(b));
-
-  return files;
+  return workspaceService.findFiles({ include, exclude });
 }
 
 function filterTranslationFilesByNearestMatch(files: string[]) {
@@ -306,10 +296,10 @@ async function requestTranslationKey(): Promise<string | undefined> {
 }
 
 function showCancelledMessage() {
-  vscode.window.showInformationMessage("Cancelled translation command");
+  toastService.showInfo("Cancelled command");
 }
 
 function transformKeyForInsertion(key: string) {
-  const pattern = configService.getValue(keyInsertPatternConfig);
+  const pattern = configService.getValue(configs.keyInsertPattern);
   return pattern.replace(/%KEY%/gi, key);
 }
