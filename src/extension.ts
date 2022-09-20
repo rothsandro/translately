@@ -52,7 +52,8 @@ export function activate(ctx: vscode.ExtensionContext) {
       return;
     }
 
-    const translationKey = await requestTranslationKey();
+    const selectedText = getSelectedText();
+    const translationKey = selectedText || (await requestTranslationKey());
     if (!translationKey) return showCancelledMessage();
 
     const translations = await requestTranslations(translationFiles);
@@ -64,11 +65,12 @@ export function activate(ctx: vscode.ExtensionContext) {
       return;
     }
 
-    const transformedKey = transformKeyForInsertion(translationKey);
-    const inserted = await insertTranslationKeyIntoFile(transformedKey);
-    !inserted && (await copyKeyToClipboard(transformedKey));
+    if (!selectedText) {
+      const transformedKey = transformKeyForInsertion(translationKey);
+      const inserted = await insertTranslationKeyIntoFile(transformedKey);
+      !inserted && (await copyKeyToClipboard(transformedKey));
+    }
   });
-
 }
 
 function registerCommand(
@@ -83,6 +85,13 @@ function registerCommand(
 async function copyKeyToClipboard(key: string) {
   await vscode.env.clipboard.writeText(key);
   vscode.window.showInformationMessage("Key copied to clipboard");
+}
+
+function getSelectedText() {
+  const activeTextEditor = vscode.window.activeTextEditor;
+  const selection = activeTextEditor?.selection;
+  const selectedText = activeTextEditor?.document.getText(selection);
+  return selectedText;
 }
 
 async function insertTranslationKeyIntoFile(key: string) {
@@ -251,12 +260,6 @@ function filterTranslationFilesByNearestMatch(files: string[]) {
 }
 
 async function requestTranslationKey(): Promise<string | undefined> {
-  const activeTextEditor = vscode.window.activeTextEditor;
-  const selection = activeTextEditor?.selection;
-  const selectedText = activeTextEditor?.document.getText(selection);
-
-  if (selectedText) return selectedText;
-
   const value = await vscode.window.showInputBox({
     prompt: "Translation Key",
     placeHolder: "component.segment-1.segment-2",
