@@ -1,9 +1,9 @@
 {
   "name": "translately",
   "displayName": "translately",
-  "description": "Tranlation Manager for VS Code",
+  "description": "Manage translations in TypeScript files",
   "version": "0.0.1",
-  "publisher": "lukb",
+  "publisher": "Sandro Roth",
   "repository": "TODO",
   "engines": {
     "vscode": "^1.34.0"
@@ -33,22 +33,22 @@
         "translately.keyInsertPattern": {
           "type": "string",
           "default": "%KEY%",
-          "description": "The pattern for inserting the translation key. The placeholder \"%KEY%\" will be replaced with the translation key."
+          "description": "The glob pattern for inserting the translation key. The placeholder \"%KEY%\" will be replaced with the translation key."
         },
         "translately.translationFilesIncludePattern": {
           "type": "string",
           "default": "**/i18n/*.ts",
-          "description": "The pattern for finding the translation files."
+          "description": "The glob pattern used to find translation files."
         },
         "translately.translationFilesExcludePattern": {
           "type": "string",
           "default": "{dist,node_modules}",
-          "description": "The pattern for excluding paths when finding the translation files."
+          "description": "The glob pattern used to exclude files when searching translation files."
         },
         "translately.translationVariablePattern": {
           "type": "string",
           "default": "[a-z]{2}[A-Z]{2}",
-          "description": "The RegExp for the variable name of the translation object."
+          "description": "The RegExp to find the translation variable in a translation file."
         },
         "translately.indentationType": {
           "type": "string",
@@ -59,7 +59,7 @@
             "Tab"
           ],
           "default": "2 spaces",
-          "description": "The text used for identation."
+          "description": "Indentation type used when adding a new translation key."
         }
       }
     }
