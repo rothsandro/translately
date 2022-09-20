@@ -34,13 +34,13 @@ const translationFileService = new TranslationFileService(
 
 export function activate(ctx: vscode.ExtensionContext) {
   registerCommand(ctx, "extension.insertExistingTranslationKey", async () => {
-    const translationFiles = await translationFileService.findNearestTranslationFiles();
-    if (translationFiles.length === 0) {
+    const files = await translationFileService.findNearestTranslationFiles();
+    if (files.length === 0) {
       toastService.showWarning("No translation files found");
       return;
     }
 
-    const keys = await extractTranslationKeysOfFile(translationFiles[0]);
+    const keys = await extractTranslationKeysOfFile(files[0]);
     if (keys.length === 0) {
       toastService.showWarning("No translation keys found");
       return;
@@ -49,14 +49,12 @@ export function activate(ctx: vscode.ExtensionContext) {
     const selectedKey = await vscode.window.showQuickPick(keys);
     if (selectedKey === undefined) return showCancelledMessage();
 
-    const transformedKey = transformKeyForInsertion(selectedKey);
-    const inserted = await insertTranslationKeyIntoFile(transformedKey);
-    !inserted && (await copyKeyToClipboard(transformedKey));
+    await insertOrCopyTranslationKey(selectedKey);
   });
 
   registerCommand(ctx, "extension.createTranslation", async () => {
-    const translationFiles = await translationFileService.findNearestTranslationFiles();
-    if (translationFiles.length === 0) {
+    const files = await translationFileService.findNearestTranslationFiles();
+    if (files.length === 0) {
       toastService.showWarning("No translation files found");
       return;
     }
@@ -65,7 +63,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     const translationKey = selectedText || (await requestTranslationKey());
     if (!translationKey) return showCancelledMessage();
 
-    const translations = await requestTranslations(translationFiles);
+    const translations = await requestTranslations(files);
     if (!translations) return showCancelledMessage();
 
     const result = addTranslationsToFiles(translationKey, translations);
@@ -75,11 +73,15 @@ export function activate(ctx: vscode.ExtensionContext) {
     }
 
     if (!selectedText) {
-      const transformedKey = transformKeyForInsertion(translationKey);
-      const inserted = await insertTranslationKeyIntoFile(transformedKey);
-      !inserted && (await copyKeyToClipboard(transformedKey));
+      await insertOrCopyTranslationKey(translationKey);
     }
   });
+}
+
+async function insertOrCopyTranslationKey(key: string) {
+  const transformedKey = transformKeyForInsertion(key);
+  const inserted = await editorService.replaceSelection(transformedKey);
+  !inserted && (await copyKeyToClipboard(transformedKey));
 }
 
 function registerCommand(
@@ -94,17 +96,6 @@ function registerCommand(
 async function copyKeyToClipboard(key: string) {
   await vscode.env.clipboard.writeText(key);
   toastService.showInfo("Key copied to clipboard");
-}
-
-async function insertTranslationKeyIntoFile(key: string) {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) return false;
-
-  await editor.edit((editBuilder) => {
-    editBuilder.replace(editor.selection, key);
-  });
-
-  return true;
 }
 
 async function extractTranslationKeysOfFile(filePath: string) {
