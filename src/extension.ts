@@ -13,6 +13,8 @@ import { ConfigService } from "./services/config.service";
 import { ToastService } from "./services/toast.service";
 import { EditorService } from "./services/editor.service";
 import { WorkspaceService } from "./services/workspace.service";
+import { TranslationFileService } from "./services/translation-file.service";
+import { matchStrings } from "./utils/text.utils";
 
 interface TranslationEntry {
   file: string;
@@ -24,11 +26,15 @@ const configService = new ConfigService();
 const toastService = new ToastService();
 const editorService = new EditorService();
 const workspaceService = new WorkspaceService();
+const translationFileService = new TranslationFileService(
+  configService,
+  workspaceService,
+  editorService
+);
 
 export function activate(ctx: vscode.ExtensionContext) {
   registerCommand(ctx, "extension.insertExistingTranslationKey", async () => {
-    const files = await findTranslationFiles();
-    const translationFiles = filterTranslationFilesByNearestMatch(files);
+    const translationFiles = await translationFileService.findNearestTranslationFiles();
     if (translationFiles.length === 0) {
       toastService.showWarning("No translation files found");
       return;
@@ -49,8 +55,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   });
 
   registerCommand(ctx, "extension.createTranslation", async () => {
-    const files = await findTranslationFiles();
-    const translationFiles = filterTranslationFilesByNearestMatch(files);
+    const translationFiles = await translationFileService.findNearestTranslationFiles();
     if (translationFiles.length === 0) {
       toastService.showWarning("No translation files found");
       return;
@@ -211,9 +216,9 @@ function findIndexForNewKey(obj: ObjectLiteralExpression, key: string) {
   const newKeyIndex = sortedList.indexOf(key);
 
   const prev = sortedList[newKeyIndex - 1] ?? "";
-  const prevMatch = getMatch(key, prev);
+  const prevMatch = matchStrings(key, prev);
   const next = sortedList[newKeyIndex + 1] ?? "";
-  const nextMatch = getMatch(key, next);
+  const nextMatch = matchStrings(key, next);
 
   const relativeToPrev = prevMatch > nextMatch;
   const relatedKeyIndex = relativeToPrev ? newKeyIndex - 1 : newKeyIndex + 1;
@@ -225,18 +230,6 @@ function findIndexForNewKey(obj: ObjectLiteralExpression, key: string) {
     : actualRelatedKeyIndex;
 
   return actualNewKeyIndex;
-}
-
-function getMatch(a: string, b: string) {
-  const max = Math.max(a.length, b.length);
-
-  for (let i = 1; i <= max; i++) {
-    if (!b.startsWith(a.slice(0, i))) {
-      return i - 1;
-    }
-  }
-
-  return max;
 }
 
 async function requestTranslations(
@@ -256,34 +249,6 @@ async function requestTranslations(
   }
 
   return entries;
-}
-
-async function findTranslationFiles() {
-  const include = configService.getValue(
-    configs.translationFilesIncludePattern
-  );
-  const exclude = configService.getValue(
-    configs.translationFilesExcludePattern
-  );
-
-  return workspaceService.findFiles({ include, exclude });
-}
-
-function filterTranslationFilesByNearestMatch(files: string[]) {
-  const current = vscode.window.activeTextEditor?.document.uri.fsPath;
-  if (!current) return files;
-
-  const filesWithMatches = files.map((file) => ({
-    file,
-    match: getMatch(current, file),
-  }));
-  const bestMatch = Math.max(...filesWithMatches.map((entry) => entry.match));
-
-  const filesWithBestMatch = filesWithMatches
-    .filter((entry) => entry.match === bestMatch)
-    .map((entry) => entry.file);
-
-  return filesWithBestMatch;
 }
 
 async function requestTranslationKey(): Promise<string | undefined> {
